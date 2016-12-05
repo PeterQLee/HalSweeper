@@ -2,12 +2,16 @@
 #define BOARD_MODULE_H
 #include <Python.h>
 #include <structmember.h>
+#include <bool.h>
 #include "gen.h"
+
+#define SQUARE_SIZE 30
+#define COORD(x,y,z): ((x)*(y))+z
 
 typedef struct {
   PyObject_HEAD
   int score; //score of the current game
-  int x,y;
+  int xsize,ysize;
   PyArrayObject * imgboard;
   board_t *mines,*clicks;
 } boardPy;
@@ -78,10 +82,9 @@ static PyModuleDef boardPymodule = {
 };
 
 //specific functions
-static PyObject * click (PyObject *self, PyObject *args);
-static PyObject * remake (PyObject *self, PyObject *args);
-
-
+static PyObject * click (boardPy *self, PyObject *args);
+static PyObject * remake (boardPy *self, PyObject *args);
+static void build_image (boardPy *self);
 
 
 #endif
