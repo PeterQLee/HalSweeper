@@ -61,8 +61,8 @@ void debug_printboard(board_t *board){
   
 }
 
-int main() {
-  board_t *b= genboard(15,15,0,0.25);
-  debug_printboard(b);
-  destroy_board(b);
-}
+/* int main() { */
+/*   board_t *b= genboard(15,15,0,0.25); */
+/*   debug_printboard(b); */
+/*   destroy_board(b); */
+/* } */

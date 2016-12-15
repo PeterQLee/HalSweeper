@@ -2,11 +2,17 @@
 #define BOARD_MODULE_H
 #include <Python.h>
 #include <structmember.h>
-#include <bool.h>
+//#include <bool.h>
+//#include "npy_common.h"
+#include <numpy/arrayobject.h>
 #include "gen.h"
+#include "types.h"
 
+#define MAX_QUEUE_SIZE 100
 #define SQUARE_SIZE 30
-#define COORD(x,y,z): ((x)*(y))+z
+#define COORD(x,y,z) (((x)*(y))+z)
+#define XCOORD(o,ysize) ((o)/(ysize))
+#define YCOORD(o,ysize) ((o)%(ysize))
 
 typedef struct {
   PyObject_HEAD
@@ -16,14 +22,33 @@ typedef struct {
   board_t *mines,*clicks;
 } boardPy;
 
+//debug functions
+static PyObject * _printclicks(boardPy *self);
+static PyObject *_printmine(boardPy *self);
+
+//specific functions
+static PyObject * click (boardPy *self, PyObject *args);
+static void remake (boardPy *self, PyObject *args);
+static void build_image (boardPy *self);
+static int permeate_click(boardPy *b, int x, int y);
+
+
 static PyMethodDef  boardPy_methods[]={
-  {"click",click,METH_VARARGS,"Method to implement clicking"},
-  {"remake",remake,METH_VARARGS,"Remake the board"}
+  {"click",(PyCFunction)click,METH_VARARGS,"Method to implement clicking"},
+  {"remake",(PyCFunction)remake,METH_VARARGS,"Remake the board"},
+  {"_debugclicks",(PyCFunction)_printclicks,METH_NOARGS,"debug clicks board"},
+  {"_debugmineboard",(PyCFunction)_printmine,METH_NOARGS,"debug nine board"},
+  {NULL}
 };
 
 static PyMemberDef boardPy_members[]={
-  {"score",T_INT,offsetof(boardPy,score),0,"current game score"}
+  {"score",T_INT,offsetof(boardPy,score),0,"current game score"},
+  {"imgboard",T_OBJECT,offsetof(boardPy,imgboard),0,"current image"},
+  {NULL}
 };
+
+
+
 
 PyMODINIT_FUNC initboard(void);
 
@@ -32,10 +57,11 @@ static void boardPy_dealloc(boardPy *self);
 static int boardPy_init(boardPy *self, PyObject *args, PyObject *kwds);
 static PyObject * boardPy_new (PyTypeObject *type, PyObject *args, PyObject *kwds);
 
+
 static PyTypeObject boardPy_Type = {
   PyVarObject_HEAD_INIT(NULL, 0)
-  "test.Test",             /* tp_name */
-  sizeof(test_TestObject), /* tp_basicsize */
+  "boardPy.BoardPy",             /* tp_name */
+  sizeof(boardPy), /* tp_basicsize */
   0,                         /* tp_itemsize */
   boardPy_dealloc,                         /* tp_dealloc */
   0,                         /* tp_print */
@@ -80,11 +106,6 @@ static PyModuleDef boardPymodule = {
   -1,
   NULL, NULL, NULL, NULL, NULL
 };
-
-//specific functions
-static PyObject * click (boardPy *self, PyObject *args);
-static PyObject * remake (boardPy *self, PyObject *args);
-static void build_image (boardPy *self);
 
 
 #endif
