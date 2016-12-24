@@ -1,12 +1,12 @@
 #include "types.h"
-
+#define LONGINC 8
 queue_t *create_queue(size_t stack_lim){
   queue_t *queue=malloc(sizeof(queue_t));
   long *mem=malloc(stack_lim*sizeof(long));
   queue->top=mem;
   queue->bottom=mem;
   queue->start_addr=mem;
-  queue->end_addr=mem+((stack_lim-1)*sizeof(long));//check this
+  queue->end_addr=mem+((stack_lim-1)*LONGINC);//check this
   queue->cursize=0;
   queue->maxsize=stack_lim;
   return queue;
@@ -59,16 +59,16 @@ void _ensure_circular(queue_t *queue) {
 void _push_queue(queue_t *queue,long c) {
   //pushes a single long
   *((long*)queue->bottom)=c;
-  (queue->bottom)++; //increment pointer
-  (queue->cursize)++;
+  queue->bottom+=LONGINC; //increment pointer
+  queue->cursize+=LONGINC;
   queue->lock=0;
 }
 
 long _pop_queue(queue_t *queue) {
   //Trusts that something is in the queue already
-  (queue->top)++;
-  (queue->cursize)--;
-  long d= *((long *)(queue->top-1));
+  queue->top+=LONGINC;
+  queue->cursize-=LONGINC;
+  long d= *((long *)(queue->top-LONGINC));
   queue->lock=0;
   return d;
 

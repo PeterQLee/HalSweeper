@@ -7,9 +7,11 @@
 #include <numpy/arrayobject.h>
 #include "gen.h"
 #include "types.h"
+#include "tile_definitions.h"
 
-#define MAX_QUEUE_SIZE 100
-#define SQUARE_SIZE 30
+#define MAX_QUEUE_SIZE 500
+#define SQUARE_SIZE 32
+#define COLOUR_OFFSET 4
 #define COORD(x,y,z) (((x)*(y))+z)
 #define XCOORD(o,ysize) ((o)/(ysize))
 #define YCOORD(o,ysize) ((o)%(ysize))
@@ -30,6 +32,7 @@ static PyObject *_printmine(boardPy *self);
 static PyObject * click (boardPy *self, PyObject *args);
 static void remake (boardPy *self, PyObject *args);
 static void build_image (boardPy *self);
+//static void copy_image (char **map, char * image, int x, int y , int ysize);
 static int permeate_click(boardPy *b, int x, int y);
 
 
