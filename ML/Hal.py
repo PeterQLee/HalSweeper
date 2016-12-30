@@ -1,0 +1,110 @@
+import tensorflow as tf
+import numpy
+import matplotlib.pyplot as plt
+from PIL import Image
+import sys
+import time
+sys.path.insert(0,'../build/lib.linux-x86_64-3.5/')
+import BoardPy
+
+
+def weight_variable(shape):
+  initial = tf.truncated_normal(shape, stddev=0.1)
+  return tf.Variable(initial)
+
+def bias_variable(shape):
+  initial = tf.constant(0.1, shape=shape)
+  return tf.Variable(initial)
+
+def conv2d(x, W,strid):
+    #num imgs, x,y,channels
+  return tf.nn.conv2d(x, W, strides=strid, padding='SAME')
+
+class Hal:
+    def __init__(self,DIMS):
+        self.DIMS=DIMS
+        self.epochs=200
+        self.end=False
+        self.convolutions=[]
+        self.full_conn=[]
+        self.board=BoardPy.BoardPy(*DIMS)
+        self.placeh_out=numpy.zeros((1,DIMS[0]*DIMS[1]))
+        
+        self.sess=tf.InteractiveSession()
+        self.input_vec=tf.placeholder(tf.float32, shape=[None,DIMS[0]*32,32*DIMS[1],4])
+        #self.x_image=tf.reshape(self.input_vec,[-1,DIMS[0],DIMS[1],4])
+                                      
+        self.out_next=tf.placeholder(tf.float32,shape=[None,DIMS[0]*DIMS[1]])
+
+        #Build layers
+        self.convolutions.append(self._newconvlayer([32,32,4,11],self.input_vec,[1,32,32,1]))
+        lastconv=tf.reshape(self.convolutions[-1][0],[-1, DIMS[0]*DIMS[1]*11])
+        f=self.full_conn
+        self.full_conn.append(self._newconnectlayer([DIMS[0]*DIMS[1]*11,1024],lastconv))
+        self.full_conn.append(self._newconnectlayer([f[-1][1][1],1024],f[-1][0]))
+        self.full_conn.append(self._newconnectlayer([f[-1][1][1],DIMS[0]*DIMS[1]],f[-1][0])) #final layer
+        self.out_vec=tf.nn.softmax(self.full_conn[-1][0])
+
+        #Training stuff
+        self.cross_entropy=tf.reduce_mean(tf.square(tf.sub(self.out_next, self.out_vec)))#tf.nn.softmax_cross_entropy_with_logits(self.out_vec,self.out_next))
+        self.train_step=tf.train.AdamOptimizer(1e-4).minimize(self.cross_entropy)
+        self.sess.run(tf.initialize_all_variables())
+                                     
+    def _newconvlayer(self,dims,last,strides):
+        weights=weight_variable(dims)
+        bias=bias_variable([dims[-1]])
+        h=tf.nn.relu(conv2d(last,weights,strides)+bias)
+        return (h,dims,(weights,bias))
+      
+    def _newconnectlayer(self,dims,last):
+        weights=weight_variable(dims)
+        bias=bias_variable([dims[-1]])
+        h=tf.nn.relu(tf.matmul(last,weights)+bias)
+        return (h,dims,(weights,bias))
+      
+    def perform_click(self, out_vec):
+        reward={1:-.5,2:-0.7,0:0.2}
+        #ret=self.board.click(unravel_index(out_vec.argmax(),out_vec.shape))
+        v=out_vec.argmax()
+        print (v,out_vec[0][v])
+        ret=self.board.click(v//self.DIMS[0],v%self.DIMS[1])
+        print (ret)
+        if ret==2: #Game end
+          print ('f to pay respecks')
+          self.end=True
+        return reward[ret]
+
+    #def feed_forward(self):
+    #    return self.sess.run(self.out_vec,feed_dict={self.in:self.board.imgboard,)
+    
+    def train(self):
+        image=self.board.imgboard.view(numpy.uint8).reshape(1,self.DIMS[0]*32,-1,4)
+        print(image[0][8][8][0])
+        image=(numpy.array(image,dtype=numpy.float32)-127.0)/255.0
+        print(image[0][8][8][0])
+
+        guess_out,=self.sess.run([self.out_vec],feed_dict={self.input_vec:image,self.out_next:self.placeh_out})
+        rew=self.perform_click(guess_out)
+        #guess_out.item(unravel_index(out_vec.argmax(),out_vec.shape))+=rew
+        guess_out[0][guess_out.argmax()]-=rew
+
+        self.sess.run([self.train_step],feed_dict={self.input_vec:image,self.out_next:guess_out})
+        
+    
+    def eval(self):
+        scores=[]
+        for i in range(self.epochs):
+          print('epoch',i)
+          self.end=False
+          while not self.end:
+            self.train()
+            img=Image.fromarray(self.board.imgboard.view(numpy.uint8).reshape(10*32,-1,4))
+            img.show()
+            time.sleep(2)
+          scores.append(self.board.score())
+          break
+        plt.plot(numpy.arange(0,len(scores)),scores)
+        plt.savefig('progress.png')
+if __name__=='__main__':
+  h=Hal((10,10))
+  h.eval()

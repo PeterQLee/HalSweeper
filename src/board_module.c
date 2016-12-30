@@ -1,7 +1,7 @@
 #include "board_module.h"
 //debug functions
 #define PY_ARRAY_UNIQUE_SYMBOL
-static int YR=0;
+
 static PyObject * _printclicks(boardPy *self){
   debug_printboard(self->clicks);
   return Py_BuildValue("");
@@ -35,27 +35,45 @@ static PyObject * boardPy_new (PyTypeObject *type, PyObject *args, PyObject *kwd
   self=(boardPy*)type->tp_alloc(type,0);
   return (PyObject *)self;
 }
+
+static PyObject * score(boardPy *self, PyObject *args){
+  int clicked,mine,num,i,j,sc=0;
+  
+  for (i=0;i<self->xsize;i++){
+    for (j=0;j<self->ysize;j++) {
+      clicked=self->clicks->board[COORD(i,self->ysize,j)];
+      mine=self->mines->board[COORD(i,self->ysize,j)] & 0x10;
+      num=self->mines->board[COORD(i,self->ysize,j)] & 0xF;
+      if (clicked && num && !mine) {
+	sc++;
+      }
+    }
+  }
+  return Py_BuildValue("i",sc);
+}
+
 static PyObject * click (boardPy *self, PyObject *args){
   int x,y;
 
   if (!PyArg_ParseTuple(args,"ii",&x,&y)) return NULL;
   //todo:  make sure x and y are in range
   int bz=self->clicks->board[x*(self->ysize)+y];
-   printf("CLICK AT %d %d\n",x,y);
-  if (bz>0) return NULL; //already clicked blank square
-  if (bz & 0x10) {
+  int m=self->mines->board[x*(self->ysize)+y];
+  if (bz>0) return Py_BuildValue("i",1); //already clicked blank square
+  if (bz==0 && (m & 0x10)){
     //game loss, do something
-    return NULL;
+    permeate_click(self,x,y);
+    build_image(self);
+    return Py_BuildValue("i",2);
+
   }
   else{
     permeate_click(self,x,y);
 
   }
-  if (!YR) {
-    build_image(self);
-    YR++;
-  }
-  return self->imgboard;
+
+  build_image(self);
+  return Py_BuildValue("i",0);
   
   
 }
@@ -89,20 +107,20 @@ static int permeate_click(boardPy *b, int x, int y) {
 static void remake (boardPy *self, PyObject *args){
   //TODO: check errors
   int i;
-  npy_intp x,y;
+  npy_intp x=0,y=0;
   double keep_prob=0.3;
   
   if (!PyArg_ParseTuple(args,"ii",&x,&y)) return;
   npy_intp dims[2]={x*SQUARE_SIZE,y*SQUARE_SIZE};
-  npy_intp *dat=calloc(sizeof(npy_intp),x*y*SQUARE_SIZE*SQUARE_SIZE);
-
+  npy_intp *dat=calloc(x*y*SQUARE_SIZE*SQUARE_SIZE,sizeof(npy_intp));
+  
   PyObject * img_npy=PyArray_SimpleNewFromData(2,dims,NPY_INT,dat);
   
   if (self->imgboard)
     Py_DECREF(self->imgboard);
 
   self->imgboard=(PyArrayObject *)img_npy;   
-
+  Py_INCREF(self->imgboard);
   genboard(x,y,0,keep_prob,self->mines,self->clicks);  //make underlying primitive board
   self->ysize=y;
   self->xsize=x;
@@ -113,6 +131,7 @@ static void remake (boardPy *self, PyObject *args){
 static void build_image(boardPy *self) {//builds pixel image
   int i,j,k,f=0,n;
   int clicked,num,mine;
+  //self->imgboard=PyArray_ContiguousFromAny(self->imgboard,NPY_INT,2,2); //unoptimal
   char * map=self->imgboard->data;//PyArray_BYTES(self->imgboard);
   if (self->imgboard->strides[0]!=self->ysize*SQUARE_SIZE*COLOUR_OFFSET)
     printf("AHEAEFAE\n");
@@ -193,7 +212,7 @@ static void build_image(boardPy *self) {//builds pixel image
 	memcpy(map+(f++)*SQUARE_SIZE*COLOUR_OFFSET,img_buffer[j]+ k*SQUARE_SIZE*COLOUR_OFFSET,SQUARE_SIZE*COLOUR_OFFSET);
       }
     }
-    printf("f= %d",f);
+    //printf("f= %d",f);
   }
   
   /* printf("%d\n",self->xsize*SQUARE_SIZE); */
