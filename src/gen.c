@@ -11,10 +11,10 @@ void alloc_board(board_t **t, int n) {
   }
 }
 
-void genboard(int x, int y, int seed, double keep_prob, board_t * mineboard, board_t * clickboard){
+void genboard(int x, int y,  double keep_prob, board_t * mineboard, board_t * clickboard){
   piece * board=calloc(sizeof(piece),x*y);
   int i,j,k,l;
-  srand(seed);
+  
   for (i=0;i<x;i++) {
     for (j=0;j<y;j++) {
       if ((double)rand()/(double)RAND_MAX < keep_prob) {

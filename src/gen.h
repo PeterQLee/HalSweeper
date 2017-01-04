@@ -19,7 +19,7 @@ typedef struct{
 colour_t rgb_to_col(unsigned char r, unsigned char g, unsigned char b);
 
 void alloc_board(board_t **t, int n);
-void genboard (int x, int y, int seed,double keep_prob,board_t *pieceboard, board_t *clickboard);
+void genboard (int x, int y, double keep_prob,board_t *pieceboard, board_t *clickboard);
 void destroy_board(board_t *board);
 image_t * create_image(board_t *board);
 

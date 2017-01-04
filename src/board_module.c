@@ -104,6 +104,18 @@ static int permeate_click(boardPy *b, int x, int y) {
   clear_queue(Q);
   return 0;
 }
+static PyObject * remake_wrapper(boardPy *self, PyObject *args){
+  destroy_board(self->mines);
+  destroy_board(self->clicks);
+  self->mines=malloc(sizeof(board_t));
+  self->mines->board=NULL;
+  self->clicks=malloc(sizeof(board_t));
+  self->clicks->board=NULL;
+  remake(self,args);
+  return Py_BuildValue("");
+
+    
+}
 static void remake (boardPy *self, PyObject *args){
   //TODO: check errors
   int i;
@@ -112,20 +124,24 @@ static void remake (boardPy *self, PyObject *args){
   
   if (!PyArg_ParseTuple(args,"ii",&x,&y)) return;
   npy_intp dims[2]={x*SQUARE_SIZE,y*SQUARE_SIZE};
-  npy_intp *dat=calloc(x*y*SQUARE_SIZE*SQUARE_SIZE,sizeof(npy_intp));
+  npy_intp *dat=calloc(x*y*SQUARE_SIZE*SQUARE_SIZE,sizeof(npy_intp)); //possible mem leak??
   
   PyObject * img_npy=PyArray_SimpleNewFromData(2,dims,NPY_INT,dat);
   
-  if (self->imgboard)
+  if (self->imgboard) {
     Py_DECREF(self->imgboard);
-
+    free (self->imgdat);
+  }
+  self->imgdat=dat;
   self->imgboard=(PyArrayObject *)img_npy;   
   Py_INCREF(self->imgboard);
-  genboard(x,y,0,keep_prob,self->mines,self->clicks);  //make underlying primitive board
+  genboard(x,y,keep_prob,self->mines,self->clicks);  //make underlying primitive board
   self->ysize=y;
   self->xsize=x;
   build_image(self);
-  printf( "MADE\n");
+  
+
+
 }
 
 static void build_image(boardPy *self) {//builds pixel image
@@ -233,6 +249,7 @@ static void build_image(boardPy *self) {//builds pixel image
 
 PyMODINIT_FUNC PyInit_BoardPy(void) {
   import_array();
+  srand(1);
   PyObject *m;
   boardPy_Type.tp_new=PyType_GenericNew;
   if (PyType_Ready(&boardPy_Type) < 0)

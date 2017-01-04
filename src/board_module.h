@@ -8,6 +8,7 @@
 #include "gen.h"
 #include "types.h"
 #include "tile_definitions.h"
+#include <stdlib.h>
 
 #define MAX_QUEUE_SIZE 500
 #define SQUARE_SIZE 32
@@ -21,6 +22,7 @@ typedef struct {
   int score; //score of the current game
   int xsize,ysize;
   PyArrayObject * imgboard;
+  npy_intp *imgdat;
   board_t *mines,*clicks;
 } boardPy;
 
@@ -31,6 +33,7 @@ static PyObject *_printmine(boardPy *self);
 //specific functions
 static PyObject * click (boardPy *self, PyObject *args);
 static PyObject * score(boardPy *self, PyObject *args);
+static PyObject * remake_wrapper(boardPy *self, PyObject *args);
 static void remake (boardPy *self, PyObject *args);
 static void build_image (boardPy *self);
 //static void copy_image (char **map, char * image, int x, int y , int ysize);
@@ -39,7 +42,7 @@ static int permeate_click(boardPy *b, int x, int y);
 
 static PyMethodDef  boardPy_methods[]={
   {"click",(PyCFunction)click,METH_VARARGS,"Method to implement clicking"},
-  {"remake",(PyCFunction)remake,METH_VARARGS,"Remake the board"},
+  {"remake",(PyCFunction)remake_wrapper,METH_VARARGS,"Remake the board"},
   {"score",(PyCFunction)score,METH_NOARGS,"Gets the total score of the board"},
   {"_debugclicks",(PyCFunction)_printclicks,METH_NOARGS,"debug clicks board"},
   {"_debugmineboard",(PyCFunction)_printmine,METH_NOARGS,"debug nine board"},
