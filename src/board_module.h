@@ -21,8 +21,8 @@ typedef struct {
   PyObject_HEAD
   int score; //score of the current game
   int xsize,ysize;
-  PyArrayObject * imgboard;
-  npy_intp *imgdat;
+  PyArrayObject *imgboard,*mineboard;
+  npy_intp *imgdat, *minedat;
   board_t *mines,*clicks;
 } boardPy;
 
@@ -52,6 +52,7 @@ static PyMethodDef  boardPy_methods[]={
 static PyMemberDef boardPy_members[]={
   {"score",T_INT,offsetof(boardPy,score),0,"current game score"},
   {"imgboard",T_OBJECT,offsetof(boardPy,imgboard),0,"current image"},
+  {"mineboard",T_OBJECT,offsetof(boardPy,mineboard),0,"current mines"},
   {NULL}
 };
 

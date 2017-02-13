@@ -22,6 +22,7 @@ static void boardPy_dealloc(boardPy *self){
 }
 static int boardPy_init(boardPy *self, PyObject *args, PyObject *kwds){
   self->imgboard=NULL;
+  self->mineboard=NULL;
   self->mines=malloc(sizeof(board_t));
   self->mines->board=NULL;
   self->clicks=malloc(sizeof(board_t));
@@ -124,16 +125,26 @@ static void remake (boardPy *self, PyObject *args){
   
   if (!PyArg_ParseTuple(args,"ii",&x,&y)) return;
   npy_intp dims[2]={x*SQUARE_SIZE,y*SQUARE_SIZE};
+  npy_intp di[2]={x,y};
   npy_intp *dat=calloc(x*y*SQUARE_SIZE*SQUARE_SIZE,sizeof(npy_intp)); //possible mem leak??
-  
+  npy_intp *minedat=calloc(x*y,sizeof(npy_intp));
+  PyObject *min_npy=PyArray_SimpleNewFromData(2,di,NPY_INT,minedat);
   PyObject * img_npy=PyArray_SimpleNewFromData(2,dims,NPY_INT,dat);
   
   if (self->imgboard) {
     Py_DECREF(self->imgboard);
     free (self->imgdat);
   }
+  if (self->mineboard) {
+    Py_DECREF(self->mineboard);
+    free (self->minedat);
+  }
+  self->minedat=minedat;
+  self->mineboard=(PyArrayObject*) min_npy;
+  Py_INCREF(self->mineboard);
+  
   self->imgdat=dat;
-  self->imgboard=(PyArrayObject *)img_npy;   
+  self->imgboard=(PyArrayObject *)img_npy;
   Py_INCREF(self->imgboard);
   genboard(x,y,keep_prob,self->mines,self->clicks);  //make underlying primitive board
   self->ysize=y;
@@ -149,6 +160,7 @@ static void build_image(boardPy *self) {//builds pixel image
   int clicked,num,mine;
   //self->imgboard=PyArray_ContiguousFromAny(self->imgboard,NPY_INT,2,2); //unoptimal
   char * map=self->imgboard->data;//PyArray_BYTES(self->imgboard);
+  npy_int * minedata=self->mineboard->data;
   if (self->imgboard->strides[0]!=self->ysize*SQUARE_SIZE*COLOUR_OFFSET)
     printf("AHEAEFAE\n");
   char * img_buffer[self->ysize];
@@ -169,30 +181,39 @@ static void build_image(boardPy *self) {//builds pixel image
 	  switch (num){
 	  case 0:
 	    img_buffer[j]=IMAGE(empty);
+	    minedata[COORD(i,self->ysize,j)]=0;
 	    break;
 	  case 1:
 	    img_buffer[j]=IMAGE(1);
+	    minedata[COORD(i,self->ysize,j)]=1;
 	    break;
 	  case 2:
 	    img_buffer[j]=IMAGE(2);
+	    minedata[COORD(i,self->ysize,j)]=2;
 	    break;
 	  case 3:
 	    img_buffer[j]=IMAGE(3);
+	    minedata[COORD(i,self->ysize,j)]=3;
 	    break;
 	  case 4:
 	    img_buffer[j]=IMAGE(4);
+	    minedata[COORD(i,self->ysize,j)]=4;
 	    break;
 	  case 5:
 	    img_buffer[j]=IMAGE(5);
+	    minedata[COORD(i,self->ysize,j)]=5;
 	    break;
 	  case 6:
 	    img_buffer[j]=IMAGE(6);
+	    minedata[COORD(i,self->ysize,j)]=6;
 	    break;
 	  case 7:
 	    img_buffer[j]=IMAGE(7);
+	    minedata[COORD(i,self->ysize,j)]=7;
 	    break;
 	  case 8:
 	    img_buffer[j]=IMAGE(8);
+	    minedata[COORD(i,self->ysize,j)]=8;
 	    break;
 	  default:
 	    printf("ERROR, image buffer\n");
@@ -204,6 +225,7 @@ static void build_image(boardPy *self) {//builds pixel image
 	break;
       default://unclicked
 	img_buffer[j]=IMAGE(unclick);
+	minedata[COORD(i,self->ysize,j)]=-1;
 	break;
       }
 	
