@@ -17,12 +17,17 @@ static void boardPy_dealloc(boardPy *self){
   destroy_board(self->clicks);
   //if (self->imgboard) //temp
   //  Py_DECREF(self->imgboard);
+  if (self->mineboard) {
+    Py_DECREF(self->mineboard);
+  }
+  
   Py_TYPE(self)->tp_free((PyObject*)self);
   printf("DEALLOC\n");
 }
 static int boardPy_init(boardPy *self, PyObject *args, PyObject *kwds){
   self->imgboard=NULL;
   self->mineboard=NULL;
+  self->clickboard=NULL;
   self->mines=malloc(sizeof(board_t));
   self->mines->board=NULL;
   self->clicks=malloc(sizeof(board_t));
@@ -106,6 +111,9 @@ static int permeate_click(boardPy *b, int x, int y) {
   return 0;
 }
 static PyObject * remake_wrapper(boardPy *self, PyObject *args){
+  if (self->clickboard)
+    Py_DECREF(self->clickboard);
+  
   destroy_board(self->mines);
   destroy_board(self->clicks);
   self->mines=malloc(sizeof(board_t));
@@ -121,7 +129,7 @@ static void remake (boardPy *self, PyObject *args){
   //TODO: check errors
   int i;
   npy_intp x=0,y=0;
-  double keep_prob=0.3;
+  double keep_prob=0.15;
   
   if (!PyArg_ParseTuple(args,"ii",&x,&y)) return;
   npy_intp dims[2]={x*SQUARE_SIZE,y*SQUARE_SIZE};
@@ -147,13 +155,16 @@ static void remake (boardPy *self, PyObject *args){
   self->imgboard=(PyArrayObject *)img_npy;
   Py_INCREF(self->imgboard);
   genboard(x,y,keep_prob,self->mines,self->clicks);  //make underlying primitive board
+
+  self->clickboard=PyArray_SimpleNewFromData(2,di,NPY_UINT8,self->clicks->board);
+  Py_INCREF(self->clickboard);
+  
   self->ysize=y;
   self->xsize=x;
   build_image(self);
-  
-
-
 }
+
+
 
 static void build_image(boardPy *self) {//builds pixel image
   int i,j,k,f=0,n;

@@ -38,7 +38,7 @@ class Hal:
 
         self.train_index=tf.placeholder(tf.int32)
         self.sess=tf.InteractiveSession()
-        self.input_vec=tf.placeholder(tf.float32, shape=[None,DIMS[0]*32,32*DIMS[1],4])
+        self.input_vec=tf.placeholder(tf.float32, shape=[None,DIMS[0],DIMS[1],1])
         #self.x_image=tf.reshape(self.input_vec,[-1,DIMS[0],DIMS[1],4])
                                       
         #self.out_next=tf.placeholder(tf.float32,shape=[None,DIMS[0]*DIMS[1]])
@@ -88,12 +88,7 @@ class Hal:
       
     def perform_click(self, out_vec):
         reward={1:-.1,2:-.1,0:0.05}
-        #ret=self.board.click(unravel_index(out_vec.argmax(),out_vec.shape))
         v=out_vec.argmax()
-        #print(out_vec.shape)
-        #if (abs(out_vec[0][v])<=0.001):
-        #print (out_vec)
-        #print (v,out_vec[0][v])
         sample=random.uniform(0,1)
         if sample<0.01:
           x=random.randint(0,9)
@@ -119,12 +114,12 @@ class Hal:
         guess_out,=self.sess.run([self.out_vec],feed_dict={self.input_vec:image,self.target:0,self.train_index:0})
         
         self.rew=self.perform_click(guess_out)
-        #img=Image.fromarray(self.board.imgboard.view(numpy.uint8).reshape(10*32,-1,4))
-        #img.show()
         
     def train(self):
-      image=self.board.imgboard.view(numpy.uint8).reshape(1,self.DIMS[0]*32,-1,4)
-      image=(numpy.array(image,dtype=numpy.float32)-127.0)/255.0
+      image=((self.board.mineboard-3.5)/2.8722813232690143) #Normalize mineboard
+      image=numpy.pad(image,[1,1],'constant').reshape(-1,self.DIMS[0],self.DIMS[1],1) #reshape to dims
+      
+      
       zeros=numpy.zeros((1,self.DIMS[0]*self.DIMS[1]))
 
       guess_out,=self.sess.run([self.out_vec],feed_dict={self.input_vec:image,self.target:0,self.train_index:0})
@@ -138,10 +133,6 @@ class Hal:
       
       nextQ=nextQ[0][nextQ.argmax()]
       target=rew+0.5*nextQ
-      #if (numpy.array_equal(self.click_filter,self.last)):
-      #  print (list(guess_out))
-      #  print (list(self.click_filter),guess_out.argmax(),self.click_filter[guess_out.argmax()])
-
       self.last=self.click_filter.copy()
       self.sess.run([self.train_step],feed_dict={self.input_vec:image,self.target:target,self.train_index:guess_out.argmax()})
         
