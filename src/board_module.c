@@ -28,6 +28,7 @@ static int boardPy_init(boardPy *self, PyObject *args, PyObject *kwds){
   self->imgboard=NULL;
   self->mineboard=NULL;
   self->clickboard=NULL;
+  self->truthboard=NULL;
   self->mines=malloc(sizeof(board_t));
   self->mines->board=NULL;
   self->clicks=malloc(sizeof(board_t));
@@ -113,7 +114,8 @@ static int permeate_click(boardPy *b, int x, int y) {
 static PyObject * remake_wrapper(boardPy *self, PyObject *args){
   if (self->clickboard)
     Py_DECREF(self->clickboard);
-  
+  if (self->truthboard)
+    Py_DECREF(self->truthboard);
   destroy_board(self->mines);
   destroy_board(self->clicks);
   self->mines=malloc(sizeof(board_t));
@@ -138,6 +140,7 @@ static void remake (boardPy *self, PyObject *args){
   npy_intp *minedat=calloc(x*y,sizeof(npy_intp));
   PyObject *min_npy=PyArray_SimpleNewFromData(2,di,NPY_INT,minedat);
   PyObject * img_npy=PyArray_SimpleNewFromData(2,dims,NPY_INT,dat);
+
   
   if (self->imgboard) {
     Py_DECREF(self->imgboard);
@@ -154,7 +157,11 @@ static void remake (boardPy *self, PyObject *args){
   self->imgdat=dat;
   self->imgboard=(PyArrayObject *)img_npy;
   Py_INCREF(self->imgboard);
+  //srand(1);
   genboard(x,y,keep_prob,self->mines,self->clicks);  //make underlying primitive board
+  PyObject *truth_npy=PyArray_SimpleNewFromData(2,di,NPY_UINT8,self->mines->board);
+  self->truthboard=truth_npy;
+  Py_INCREF(self->truthboard);
 
   self->clickboard=PyArray_SimpleNewFromData(2,di,NPY_UINT8,self->clicks->board);
   Py_INCREF(self->clickboard);

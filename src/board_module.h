@@ -21,7 +21,7 @@ typedef struct {
   PyObject_HEAD
   int score; //score of the current game
   int xsize,ysize;
-  PyArrayObject *imgboard,*mineboard, *clickboard;
+  PyArrayObject *imgboard,*mineboard, *clickboard,*truthboard;
   npy_intp *imgdat, *minedat;
   board_t *mines,*clicks;
 } boardPy;
@@ -50,10 +50,10 @@ static PyMethodDef  boardPy_methods[]={
 };
 
 static PyMemberDef boardPy_members[]={
-  {"score",T_INT,offsetof(boardPy,score),0,"current game score"},
   {"imgboard",T_OBJECT,offsetof(boardPy,imgboard),0,"current image"},
   {"mineboard",T_OBJECT,offsetof(boardPy,mineboard),0,"current mines"},
   {"clickboard",T_OBJECT,offsetof(boardPy,clickboard),0,"shows which fields are empty or full"},
+  {"truthboard",T_OBJECT,offsetof(boardPy,truthboard),0,"Gives the true values for each position"},
   {NULL}
 };
 
